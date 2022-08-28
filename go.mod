@@ -1,4 +1,4 @@
-module lc-go
+module github.com/yuchi518/lc-go
 
 go 1.19
 
