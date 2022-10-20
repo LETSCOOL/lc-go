@@ -1,5 +1,6 @@
 #!/bin/bash
 # 執行的目錄與與產生的 env 檔案相同
+# 複製來源：lc-go/lg/gen_version_env.sh
 
 COMMIT_TAGS=$(git tag --contains)
 if [ -z "$COMMIT_TAGS" ]

@@ -3,7 +3,6 @@ package lg
 import (
 	"errors"
 	"github.com/joho/godotenv"
-	"log"
 )
 
 const (
@@ -39,7 +38,7 @@ type Version struct {
 func LoadVerEnv(filenames ...string) (*Version, error) {
 	err := godotenv.Load(filenames...)
 	if err != nil {
-		log.Println("Error loading image_version.env file")
+		//log.Println("Error loading image_version.env file")
 		return nil, errors.New("loading image_version.env file failed")
 	} else {
 		MajorVersion = GetenvInt(EnvImageVersionMajor, 0)
