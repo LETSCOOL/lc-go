@@ -23,8 +23,8 @@ const (
 //)
 
 type Injectable interface {
-	GetInjection() map[DependencyKey]any
-	//RunInitialization()
+	DeclareInjection() map[DependencyKey]any
+	//InjectDependency()
 }
 
 func MethodByName(typ reflect.Type, fnName string) (reflect.Method, bool) {
@@ -47,8 +47,8 @@ func ToInstance(typ reflect.Type) (any, error) {
 		return dep, errors.New("the type does not implement Injectable interface")
 	}*/
 
-	if _, ok := MethodByName(typ, "RunInitialization"); !ok {
-		return nil, fmt.Errorf("the type(%v) does not implement a method with name 'RunInitialization'", typ)
+	if _, ok := MethodByName(typ, "InjectDependency"); !ok {
+		return nil, fmt.Errorf("the type(%v) does not implement a method with name 'InjectDependency'", typ)
 	}
 
 	return instIf, nil
@@ -86,13 +86,13 @@ func SetUnexportedField(field reflect.Value, value interface{}) {
 
 func InitialDependency(typ reflect.Type, inst any, reference *map[DependencyKey]any) error {
 	TypeOfType := reflect.TypeOf(reflect.TypeOf(struct{}{}))
-	initMethod, _ := MethodByName(typ, "RunInitialization")
+	initMethod, _ := MethodByName(typ, "InjectDependency")
 	methodTyp := initMethod.Type
 	//log.Println(methodTyp.NumIn())
 	if methodTyp.NumIn() <= 0 {
 		// only receiver
-		//log.Println("Only receiver", reflect.ValueOf(inst).MethodByName("RunInitialization").IsValid())
-		reflect.ValueOf(inst).MethodByName("RunInitialization").Call(nil)
+		//log.Println("Only receiver", reflect.ValueOf(inst).MethodByName("InjectDependency").IsValid())
+		reflect.ValueOf(inst).MethodByName("InjectDependency").Call(nil)
 	} else {
 		numMethodIn := methodTyp.NumIn()
 		args := make([]reflect.Value, 0, numMethodIn-1)
@@ -155,9 +155,9 @@ func InitialDependency(typ reflect.Type, inst any, reference *map[DependencyKey]
 			args = append(args, inValue)
 		}
 
-		//Invoke(inst, "RunInitialization", args...)
+		//Invoke(inst, "InjectDependency", args...)
 		//log.Println("args num", len(args))
-		reflect.ValueOf(inst).MethodByName("RunInitialization").Call(args)
+		reflect.ValueOf(inst).MethodByName("InjectDependency").Call(args)
 	}
 
 	return nil
@@ -174,7 +174,7 @@ func CreateDependency(rootTyp reflect.Type, reference *map[DependencyKey]any) (a
 	}
 
 	if dep, ok := inst.(Injectable); ok {
-		injection := dep.GetInjection()
+		injection := dep.DeclareInjection()
 		for injKey, injValue := range injection {
 			if injTyp, ok := injValue.(reflect.Type); ok {
 				// type, create and inject

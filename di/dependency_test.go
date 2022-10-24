@@ -14,11 +14,11 @@ type TestI2 struct {
 	TestI
 }
 
-func (t *TestI2) GetInjection() map[DependencyKey]any {
+func (t *TestI2) DeclareInjection() map[DependencyKey]any {
 	return map[DependencyKey]any{}
 }
 
-func (t *TestI2) RunInitialization(p struct {
+func (t *TestI2) InjectDependency(p struct {
 	str1 string
 	_    *string `di:"str2"`
 }) {
@@ -68,7 +68,7 @@ func TestInitialization(t *testing.T) {
 type TestApp struct {
 }
 
-func (a *TestApp) GetInjection() map[DependencyKey]any {
+func (a *TestApp) DeclareInjection() map[DependencyKey]any {
 	//config := map[string]any{
 	//	"ip":   "192.168.0.1",
 	//	"port": 3345,
@@ -80,7 +80,7 @@ func (a *TestApp) GetInjection() map[DependencyKey]any {
 	}
 }
 
-func (a *TestApp) RunInitialization(p struct {
+func (a *TestApp) InjectDependency(p struct {
 	cfg  map[string]any `di:"config"`
 	lib1 *TestLib1      `di:"Lib1"`
 	lib2 *TestLib2      `di:"Lib2"`
@@ -92,7 +92,7 @@ type TestLib1 struct {
 	v int
 }
 
-func (l *TestLib1) RunInitialization(p struct {
+func (l *TestLib1) InjectDependency(p struct {
 	cfg map[string]any `di:"config"`
 }) {
 	fmt.Printf("TestLib1\n\taddress: %p\n\tcfg: %v\n", l, p.cfg)
@@ -102,7 +102,7 @@ type TestLib2 struct {
 	v int
 }
 
-func (l *TestLib2) RunInitialization(p struct {
+func (l *TestLib2) InjectDependency(p struct {
 	lib1 *TestLib1 `di:"Lib1"`
 }) {
 	fmt.Printf("TestLib2\n\taddress: %p\n\tlib1: %p\n", l, p.lib1)
