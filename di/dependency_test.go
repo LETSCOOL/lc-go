@@ -118,9 +118,9 @@ func TestDI(t *testing.T) {
 	}
 	ref["config"] = config
 
-	_, err := CreateDependency(appTyp, &ref)
+	inst, err := CreateDependency(appTyp, &ref)
 	if err != nil {
 		t.Fatal(err)
 	}
-
+	fmt.Println("Inst type:", reflect.TypeOf(inst))
 }
