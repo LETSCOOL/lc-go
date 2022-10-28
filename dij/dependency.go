@@ -12,8 +12,21 @@ type DependencyKey = string
 
 const (
 	TagName      = "di"
-	StackDeepKey = "__stack_deep__"
+	StackDeepKey = "__stack_deep__*"
+	StackKey     = "__stack__*"
 )
+
+type DependencyStack struct {
+	Inst     any
+	Deep     int
+	Fullname string
+}
+
+var LogEnabled = false
+
+func EnableLog() {
+	LogEnabled = true
+}
 
 func CallDependencyInjection(initMethod reflect.Method, inst any, reference *map[DependencyKey]any) error {
 	methodTyp := initMethod.Type
@@ -45,15 +58,36 @@ func CallDependencyInjection(initMethod reflect.Method, inst any, reference *map
 }
 
 func createAndInitializeInstance(insTyp reflect.Type, reference *map[DependencyKey]any, forParameter bool, applyingName string) (reflect.Value, error) {
+	// ================================
+	// save stack
+	stack := &DependencyStack{
+		Fullname: applyingName,
+	}
+	stackDeepCount := 0
 	if count, existing := (*reference)[StackDeepKey]; existing {
-		c := count.(int) + 1
-		(*reference)[StackDeepKey] = c
-		if c > 20 {
-			return reflect.ValueOf(nil), fmt.Errorf("statck go to deep (%d)", c)
+		stackDeepCount = count.(int) + 1
+		(*reference)[StackDeepKey] = stackDeepCount
+		if stackDeepCount > 20 {
+			return reflect.ValueOf(nil), fmt.Errorf("statck go to deep (%d)", stackDeepCount)
 		}
 	} else {
 		(*reference)[StackDeepKey] = 1
+		stackDeepCount = 1
 	}
+	stack.Deep = stackDeepCount
+	defer func() {
+		(*reference)[StackDeepKey] = (*reference)[StackDeepKey].(int) - 1
+	}()
+	if stackSlice, existing := (*reference)[StackKey]; existing {
+		slice := stackSlice.([]*DependencyStack)
+		slice = append(slice, stack)
+		(*reference)[StackKey] = slice
+	} else {
+		slice := []*DependencyStack{stack}
+		(*reference)[StackKey] = slice
+	}
+	// == end of saving stack deep count
+	// =================================
 
 	TypeOfType := reflect.TypeOf(reflect.TypeOf(struct{}{}))
 
@@ -61,15 +95,20 @@ func createAndInitializeInstance(insTyp reflect.Type, reference *map[DependencyK
 		//log.Println(insTyp.Kind())
 		return reflect.ValueOf(nil), fmt.Errorf("initialization function support struct parameters(%s) only", insTyp.Name())
 	}
+
+	// create new instance and save for reference
 	//log.Println("In", i, insTyp, insTyp.Kind())
 	instPtrValue := reflect.New(insTyp)
 	instValue := instPtrValue.Elem()
+	instPtrIf := instPtrValue.Interface()
 	if applyingName != "" {
-		log.Printf("*** Set %v by type %v\n", applyingName, insTyp)
-		(*reference)[applyingName] = instPtrValue.Interface()
+		if LogEnabled {
+			log.Printf("*** Set %v by type %v\n", applyingName, insTyp)
+		}
+		(*reference)[applyingName] = instPtrIf
 	}
-	//log.Println(reflect.TypeOf(inValue.Interface()))
-	// TODO: init inValue
+	stack.Inst = instPtrIf
+
 	for j := 0; j < insTyp.NumField(); j++ {
 		fieldSpec := insTyp.Field(j)
 		diTag, existingDiTag := fieldSpec.Tag.Lookup(TagName)
@@ -88,7 +127,9 @@ func createAndInitializeInstance(insTyp reflect.Type, reference *map[DependencyK
 		} else if name == "^" {
 			name = FullnameOfType(fieldSpec.Type)
 		}
-		log.Printf("Field name: %s for %v", name, fieldSpec)
+		if LogEnabled {
+			log.Printf("Field name: %s for %v", name, fieldSpec)
+		}
 		var refValue any
 		if v, existing := (*reference)[name]; existing {
 			if reflect.TypeOf(v) == TypeOfType {
@@ -143,7 +184,7 @@ func createAndInitializeInstance(insTyp reflect.Type, reference *map[DependencyK
 	}
 
 	if injectMethod, ok := GetMethodForReceiverType(insTyp, "InjectDependency"); ok {
-		err := CallDependencyInjection(injectMethod, instPtrValue.Interface(), reference)
+		err := CallDependencyInjection(injectMethod, instPtrIf, reference)
 		if err != nil {
 			return reflect.ValueOf(nil), err
 		}
@@ -171,6 +212,21 @@ func CreateInstance(rootTyp reflect.Type, reference *map[DependencyKey]any, inst
 		return nil, err
 	}
 	instPtrIf := instPtrValue.Interface()
+
+	if deepCount := (*reference)[StackDeepKey].(int); deepCount != 0 {
+		return nil, fmt.Errorf("incorrect final stack deep count(%d)", deepCount)
+	}
+
+	if stackSlice, existing := (*reference)[StackKey]; existing {
+		if LogEnabled {
+			slice := stackSlice.([]*DependencyStack)
+			for _, stack := range slice {
+				log.Printf("%2d. %s => %v\n", stack.Deep, Ife(stack.Fullname == "", "(NAV)", stack.Fullname), reflect.TypeOf(stack.Inst))
+			}
+		}
+	} else {
+		return nil, fmt.Errorf("missing stack")
+	}
 
 	return instPtrIf, nil
 }

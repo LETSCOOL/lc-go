@@ -57,6 +57,7 @@ func TestDI(t *testing.T) {
 		"port": 3345,
 	}
 	ref["config"] = config
+	EnableLog()
 
 	inst, err := CreateInstance(appTyp, &ref, "^")
 	if err != nil {
