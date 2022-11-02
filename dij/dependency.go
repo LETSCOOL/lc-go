@@ -113,10 +113,12 @@ func createAndInitializeInstance(insTyp reflect.Type, reference *map[DependencyK
 		fieldSpec := insTyp.Field(j)
 		diTag, existingDiTag := fieldSpec.Tag.Lookup(TagName)
 		name := parseDiTag(diTag)
-		//log.Println("Field name: ", name, fieldSpec)
 		if name == "" {
 			if existingDiTag {
 				name = fieldSpec.Name
+				if name == "" || name == "_" {
+					name = FullnameOfType(fieldSpec.Type)
+				}
 			} else {
 				// do not be referred for dependency injection
 				continue
@@ -126,6 +128,15 @@ func createAndInitializeInstance(insTyp reflect.Type, reference *map[DependencyK
 			continue
 		} else if name == "^" {
 			name = FullnameOfType(fieldSpec.Type)
+		}
+		//log.Printf("Field name: %s (%d) %v ", name, len(name), fieldSpec)
+		if l := len(name); l == 0 {
+			return reflect.ValueOf(nil), fmt.Errorf("not support anonymous name for dependency reference")
+		} else if l == 1 {
+			c := name[0]
+			if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) {
+				return reflect.ValueOf(nil), fmt.Errorf("not support symbol '%c' as dependency reference", c)
+			}
 		}
 		if LogEnabled {
 			log.Printf("Field name: %s for %v", name, fieldSpec)
@@ -170,9 +181,15 @@ func createAndInitializeInstance(insTyp reflect.Type, reference *map[DependencyK
 		if refValue == nil {
 			// ignored
 		} else if fieldSpec.Type == reflect.TypeOf(refValue) {
-			field := instValue.FieldByName(fieldSpec.Name)
+			field := instValue.Field(j)
+			if field.Type() != fieldSpec.Type {
+				log.Fatalf("Struct instance and type have different type for field index: %d, %v != %v", j, field.Type(), fieldSpec.Type)
+			}
+			//field := instValue.FieldByName(fieldSpec.Name)
 			firstChar := fieldSpec.Name[0]
-			if firstChar >= 'A' && firstChar <= 'Z' {
+			if firstChar == '_' {
+				// don't assign
+			} else if firstChar >= 'A' && firstChar <= 'Z' {
 				field.Set(reflect.ValueOf(refValue))
 			} else {
 				SetUnexportedField(field, refValue)
@@ -201,11 +218,11 @@ func CreateInstance(rootTyp reflect.Type, reference *map[DependencyKey]any, inst
 		reference = &map[DependencyKey]any{}
 	}
 
-	if instName == "^" {
+	if instName == "^" || instName == "" || instName == "_" {
 		instName = FullnameOfType(reflect.PointerTo(rootTyp))
-	} else if instName == "" {
-		log.Printf("Root instance doesn't support empty name. If you use empty name, it will not be referred in dependency-injection flow.")
-	}
+	} // else if instName == "" {
+	//	log.Printf("Root instance doesn't support empty name. If you use empty name, it will not be referred in dependency-injection flow.")
+	//}
 
 	instPtrValue, err := createAndInitializeInstance(rootTyp, reference, false, instName)
 	if err != nil {
