@@ -23,6 +23,14 @@ func (a *TestApp) InjectDependency(p struct {
 		a.lib3, reflect.TypeOf(a.lib3))
 }
 
+func (a *TestApp) DidDependencyInjection() {
+	fmt.Printf("TestApp - DidDependencyInjection\n")
+}
+
+func (a *TestApp) DidDependencyInitialization() {
+	fmt.Printf("TestApp - DidDependencyInitialization\n")
+}
+
 type TestLib1 struct {
 	v int
 }
@@ -31,6 +39,14 @@ func (l *TestLib1) InjectDependency(p struct {
 	cfg map[string]any `di:"config"`
 }) {
 	fmt.Printf("TestLib1\n\taddress: %p\n\tcfg: %v\n", l, p.cfg)
+}
+
+func (l *TestLib1) DidDependencyInjection() {
+	fmt.Printf("TestLib1 - DidDependencyInjection\n")
+}
+
+func (l *TestLib1) DidDependencyInitialization() {
+	fmt.Printf("TestLib1 - DidDependencyInitialization\n")
 }
 
 type TestLib2 struct {
@@ -43,9 +59,25 @@ func (l *TestLib2) InjectDependency(p struct {
 	fmt.Printf("TestLib2\n\taddress: %p\n\tlib1: %p\n", l, p.lib1)
 }
 
+func (l *TestLib2) DidDependencyInjection() {
+	fmt.Printf("TestLib2 - DidDependencyInjection\n")
+}
+
+func (l *TestLib2) DidDependencyInitialization() {
+	fmt.Printf("TestLib2 - DidDependencyInitialization\n")
+}
+
 type TestLib3 struct {
 	v   int
 	tmp *TestApp `di:"^"`
+}
+
+func (l *TestLib3) DidDependencyInjection() {
+	fmt.Printf("TestLib3 - DidDependencyInjection\n")
+}
+
+func (l *TestLib3) DidDependencyInitialization() {
+	fmt.Printf("TestLib3 - DidDependencyInitialization\n")
 }
 
 // go test ./dij -v -run TestDI

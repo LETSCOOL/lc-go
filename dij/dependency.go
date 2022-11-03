@@ -22,6 +22,17 @@ type DependencyStack struct {
 	Fullname string
 }
 
+type InjectionHandler interface {
+	// DidDependencyInjection will be called after injection is completed.
+	DidDependencyInjection()
+}
+
+type InitializationHandler interface {
+	// DidDependencyInitialization will be called after initialization is completed. If receiver implements InjectionHandler
+	// interface, InjectionHandler.DidDependencyInjection will be called first.
+	DidDependencyInitialization()
+}
+
 var LogEnabled = false
 
 func EnableLog() {
@@ -235,10 +246,23 @@ func CreateInstance(rootTyp reflect.Type, reference *map[DependencyKey]any, inst
 	}
 
 	if stackSlice, existing := (*reference)[StackKey]; existing {
+		slice := stackSlice.([]*DependencyStack)
 		if LogEnabled {
-			slice := stackSlice.([]*DependencyStack)
 			for _, stack := range slice {
 				log.Printf("%2d. %s => %v\n", stack.Deep, Ife(stack.Fullname == "", "(NAV)", stack.Fullname), reflect.TypeOf(stack.Inst))
+			}
+		}
+		sliceLen := len(slice)
+		for j := sliceLen - 1; j >= 0; j-- {
+			stack := slice[j]
+			if handler, ok := stack.Inst.(InjectionHandler); ok {
+				handler.DidDependencyInjection()
+			}
+		}
+		for j := sliceLen - 1; j >= 0; j-- {
+			stack := slice[j]
+			if handler, ok := stack.Inst.(InitializationHandler); ok {
+				handler.DidDependencyInitialization()
 			}
 		}
 	} else {
