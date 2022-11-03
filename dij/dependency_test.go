@@ -48,7 +48,7 @@ type TestLib3 struct {
 	tmp *TestApp `di:"^"`
 }
 
-// go test lc-go/dij -v -run TestDI
+// go test ./dij -v -run TestDI
 func TestDI(t *testing.T) {
 	appTyp := reflect.TypeOf(TestApp{})
 	ref := map[DependencyKey]any{}
