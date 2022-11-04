@@ -41,12 +41,3 @@ func Ife[T string | bool | int](condition bool, ifValue T, elseValue T) T {
 		return elseValue
 	}
 }
-
-func Map[IN string | bool | int | any, OUT string | bool | int | any](list []IN, f func(IN) OUT) []OUT {
-	out := make([]OUT, 0, len(list))
-	for _, i := range list {
-		o := f(i)
-		out = append(out, o)
-	}
-	return out
-}

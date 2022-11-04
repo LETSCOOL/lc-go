@@ -1,5 +1,35 @@
 package lg
 
+func Map[IN string | bool | int | any, OUT string | bool | int | any](list []IN, f func(IN) OUT) []OUT {
+	out := make([]OUT, 0, len(list))
+	for _, i := range list {
+		o := f(i)
+		out = append(out, o)
+	}
+	return out
+}
+
+func Filter[T any](items []T, f func(v T) (is bool)) []T {
+	filteredItems := make([]T, 0)
+
+	for _, item := range items {
+		if f(item) {
+			filteredItems = append(filteredItems, item)
+		}
+	}
+
+	return filteredItems
+}
+
+func FilterFirst[T any](items []T, f func(v T) (is bool)) (val T, exists bool) {
+	for _, item := range items {
+		if f(item) {
+			return item, true
+		}
+	}
+	return
+}
+
 func MakeIterator[T any](items []T) func() (T, bool, int) {
 	index := 0
 	return func() (val T, ok bool, i int) {

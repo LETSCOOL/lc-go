@@ -2,7 +2,7 @@ package lg
 
 import "testing"
 
-// go test ./lg -v
+// go test ./lg -v -run TestIterator
 func TestIterator(t *testing.T) {
 	ints := []int{0, 10, 20, 30, 40, 50, 60, 70, 80, 90}
 	t.Run("current order", func(t *testing.T) {
@@ -40,7 +40,8 @@ func TestIterator(t *testing.T) {
 	})
 }
 
-func TestIterate(t *testing.T) {
+// go test ./lg -v -run TestIterateFunc
+func TestIterateFunc(t *testing.T) {
 	ints := []int{0, 10, 20, 30, 40, 50, 60, 70, 80, 90}
 	t.Run("current order", func(t *testing.T) {
 		totalValues := 0
