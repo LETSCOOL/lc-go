@@ -2,7 +2,7 @@ package dij
 
 import (
 	"fmt"
-	. "github.com/yuchi518/lc-go/lg"
+	. "github.com/letscool/lc-go/lg"
 	"log"
 	"reflect"
 	"strings"
