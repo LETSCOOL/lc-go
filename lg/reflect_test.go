@@ -34,11 +34,11 @@ func TestParseStructTag(t *testing.T) {
 		if len(attrsValOnly) != 1 {
 			t.Errorf("incorrect number attributes (val only): %d", len(attrsValOnly))
 		}
-		t.Log(attrsValOnly)
+		//t.Log(attrsValOnly)
 		if len(attrsWithKey) != 2 {
 			t.Errorf("incorrect number attributes (with key): %d", len(attrsWithKey))
 		}
-		t.Log(attrsWithKey)
+		//t.Log(attrsWithKey)
 		if reflect.DeepEqual(attrs, attrsValOnly) {
 			t.Errorf("should not equal: %v != %v", attrs, attrsValOnly)
 		}
@@ -55,7 +55,7 @@ func TestParseStructTag(t *testing.T) {
 			t.Errorf("error: %v, %v", first, exists)
 		}
 
-		if first, exists := attrsObj.FirstAttrsWithKey(); !exists || first.Key != "b" || first.Val != "bb" {
+		if first, exists := attrsObj.FirstAttrsWithKey("c"); !exists || first.Key != "c" || first.Val != "ccc" {
 			t.Errorf("error: %v, %v", first, exists)
 		}
 	})

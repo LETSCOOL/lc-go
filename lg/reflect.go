@@ -29,9 +29,9 @@ func (a StructTagAttrs) AttrsWithKey() []StructTagAttr {
 	})
 }
 
-func (a StructTagAttrs) FirstAttrsWithKey() (attr StructTagAttr, exists bool) {
+func (a StructTagAttrs) FirstAttrsWithKey(key string) (attr StructTagAttr, exists bool) {
 	return FilterFirst(a.attrs, func(attr StructTagAttr) bool {
-		return !attr.ValOnly
+		return !attr.ValOnly && attr.Key == key
 	})
 }
 

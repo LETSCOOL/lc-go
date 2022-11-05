@@ -1,6 +1,9 @@
 package lg
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 // go test ./lg -v -run TestIterator
 func TestIterator(t *testing.T) {
@@ -74,6 +77,22 @@ func TestIterateFunc(t *testing.T) {
 		}
 		if totalValues != 90*10/2 {
 			t.Errorf("error: %d != %d", totalValues, 90*10/2)
+		}
+	})
+}
+
+// go test ./lg -v -run TestMapReduce
+func TestMapReduce(t *testing.T) {
+	t.Run("map-reduce", func(t *testing.T) {
+		array := []int{1, 2, 3, 4, 5, 6, 7, 8, 9}
+		floatArray := Map(array, func(in int) float64 {
+			return float64(in) * 0.3
+		})
+		result := Reduce(floatArray, "", func(v float64, lastResult string) string {
+			return fmt.Sprintf("%s-%1.2f", lastResult, v)
+		})
+		if result != "-0.30-0.60-0.90-1.20-1.50-1.80-2.10-2.40-2.70" {
+			t.Errorf("incorrect value: %s", result)
 		}
 	})
 }

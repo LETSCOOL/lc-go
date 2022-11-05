@@ -1,10 +1,18 @@
 package lg
 
-func Map[IN string | bool | int | any, OUT string | bool | int | any](list []IN, f func(IN) OUT) []OUT {
+func Map[IN string | bool | int | any, OUT string | bool | int | any](list []IN, f func(v IN) OUT) []OUT {
 	out := make([]OUT, 0, len(list))
 	for _, i := range list {
 		o := f(i)
 		out = append(out, o)
+	}
+	return out
+}
+
+func Reduce[IN any, OUT any](list []IN, initialOutputValue OUT, f func(v IN, lastResult OUT) OUT) OUT {
+	out := initialOutputValue
+	for _, v := range list {
+		out = f(v, out)
 	}
 	return out
 }
