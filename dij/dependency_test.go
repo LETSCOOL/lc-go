@@ -82,18 +82,44 @@ func (l *TestLib3) DidDependencyInitialization() {
 
 // go test ./dij -v -run TestDI
 func TestDI(t *testing.T) {
-	appTyp := reflect.TypeOf(TestApp{})
-	ref := map[DependencyKey]any{}
-	config := map[string]any{
-		"ip":   "192.168.0.1",
-		"port": 3345,
-	}
-	ref["config"] = config
-	EnableLog()
+	t.Run("simple", func(t *testing.T) {
+		appTyp := reflect.TypeOf(TestApp{})
+		ref := map[DependencyKey]any{}
+		config := map[string]any{
+			"ip":   "192.168.0.1",
+			"port": 3345,
+		}
+		ref["config"] = config
+		EnableLog()
 
-	inst, err := CreateInstance(appTyp, &ref, "^")
-	if err != nil {
-		t.Fatal(err)
-	}
-	fmt.Println("Inst type:", reflect.TypeOf(inst))
+		inst, err := CreateInstance(appTyp, &ref, "^")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, ok := inst.(*TestApp); ok {
+			//fmt.Println("Inst type:", reflect.TypeOf(inst))
+		} else {
+			t.Fatal("didn't create a create instance, ", reflect.TypeOf(inst))
+		}
+
+		if count := GetCountOfDependencyStack(&ref); count != 0 {
+			t.Errorf("incorrect stack count: %d", count)
+		}
+
+		if stack := GetHistoryOfDependencyStack(&ref); stack == nil {
+			t.Errorf("empty stack, why?")
+		} else {
+			checks := map[int]string{
+				0: "*dij.TestApp",
+				1: "*dij.TestLib3",
+				3: "*dij.TestLib1",
+				5: "*dij.TestLib2",
+			}
+			for k, v := range checks {
+				if name := stack.GetRecord(k).NameOfInstType(); name != v {
+					t.Errorf("incorrect stack record: %v, type should be: %s != %s", stack.GetRecord(k), v, name)
+				}
+			}
+		}
+	})
 }

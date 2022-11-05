@@ -9,6 +9,16 @@ import (
 )
 
 type DependencyKey = string
+type DependencyReference *map[DependencyKey]any
+type DependencyStack []*DependencyStackRecord
+
+func (s DependencyStack) NumOfRecords() int {
+	return len(s)
+}
+
+func (s DependencyStack) GetRecord(index int) *DependencyStackRecord {
+	return s[index]
+}
 
 const (
 	TagName      = "di"
@@ -16,10 +26,18 @@ const (
 	StackKey     = "__stack__*"
 )
 
-type DependencyStack struct {
+type DependencyStackRecord struct {
 	Inst     any
 	Deep     int
 	Fullname string
+}
+
+func (r DependencyStackRecord) InstType() reflect.Type {
+	return reflect.TypeOf(r.Inst)
+}
+
+func (r DependencyStackRecord) NameOfInstType() string {
+	return fmt.Sprintf("%v", reflect.TypeOf(r.Inst))
 }
 
 type InjectionHandler interface {
@@ -39,7 +57,7 @@ func EnableLog() {
 	LogEnabled = true
 }
 
-func CallDependencyInjection(initMethod reflect.Method, inst any, reference *map[DependencyKey]any) error {
+func CallDependencyInjection(initMethod reflect.Method, inst any, reference DependencyReference) error {
 	methodTyp := initMethod.Type
 	//log.Println(methodTyp.NumIn())
 	if methodTyp.NumIn() <= 0 {
@@ -68,33 +86,32 @@ func CallDependencyInjection(initMethod reflect.Method, inst any, reference *map
 	return nil
 }
 
-func createAndInitializeInstance(insTyp reflect.Type, reference *map[DependencyKey]any, forParameter bool, applyingName string) (reflect.Value, error) {
+func createAndInitializeInstance(insTyp reflect.Type, reference DependencyReference, forParameter bool, applyingName string) (reflect.Value, error) {
 	// ================================
 	// save stack
-	stack := &DependencyStack{
+	stack := &DependencyStackRecord{
 		Fullname: applyingName,
 	}
 	stackDeepCount := 0
 	if count, existing := (*reference)[StackDeepKey]; existing {
 		stackDeepCount = count.(int) + 1
-		(*reference)[StackDeepKey] = stackDeepCount
 		if stackDeepCount > 20 {
 			return reflect.ValueOf(nil), fmt.Errorf("statck go to deep (%d)", stackDeepCount)
 		}
 	} else {
-		(*reference)[StackDeepKey] = 1
 		stackDeepCount = 1
 	}
+	(*reference)[StackDeepKey] = stackDeepCount
 	stack.Deep = stackDeepCount
 	defer func() {
 		(*reference)[StackDeepKey] = (*reference)[StackDeepKey].(int) - 1
 	}()
 	if stackSlice, existing := (*reference)[StackKey]; existing {
-		slice := stackSlice.([]*DependencyStack)
+		slice := stackSlice.(DependencyStack)
 		slice = append(slice, stack)
 		(*reference)[StackKey] = slice
 	} else {
-		slice := []*DependencyStack{stack}
+		slice := DependencyStack{stack}
 		(*reference)[StackKey] = slice
 	}
 	// == end of saving stack deep count
@@ -224,7 +241,7 @@ func createAndInitializeInstance(insTyp reflect.Type, reference *map[DependencyK
 // CreateInstance create an instance of rootTyp, the rootTyp should be kind of struct.
 //
 // A pointer of an instance for rootTyp will be returned if success.
-func CreateInstance(rootTyp reflect.Type, reference *map[DependencyKey]any, instName string) (any, error) {
+func CreateInstance(rootTyp reflect.Type, reference DependencyReference, instName string) (any, error) {
 	if reference == nil {
 		reference = &map[DependencyKey]any{}
 	}
@@ -246,7 +263,7 @@ func CreateInstance(rootTyp reflect.Type, reference *map[DependencyKey]any, inst
 	}
 
 	if stackSlice, existing := (*reference)[StackKey]; existing {
-		slice := stackSlice.([]*DependencyStack)
+		slice := stackSlice.(DependencyStack)
 		if LogEnabled {
 			for _, stack := range slice {
 				log.Printf("%2d. %s => %v\n", stack.Deep, Ife(stack.Fullname == "", "(NAV)", stack.Fullname), reflect.TypeOf(stack.Inst))
@@ -270,6 +287,19 @@ func CreateInstance(rootTyp reflect.Type, reference *map[DependencyKey]any, inst
 	}
 
 	return instPtrIf, nil
+}
+
+func GetCountOfDependencyStack(ref DependencyReference) int {
+	return (*ref)[StackDeepKey].(int)
+}
+
+func GetHistoryOfDependencyStack(ref DependencyReference) (stack DependencyStack) {
+	if stackSlice, existing := (*ref)[StackKey]; !existing {
+		return nil
+	} else {
+		slice := stackSlice.(DependencyStack)
+		return slice
+	}
 }
 
 // parseDiTag parses the tag with 'di' key.
