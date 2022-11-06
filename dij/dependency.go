@@ -117,8 +117,6 @@ func createAndInitializeInstance(insTyp reflect.Type, reference DependencyRefere
 	// == end of saving stack deep count
 	// =================================
 
-	TypeOfType := reflect.TypeOf(reflect.TypeOf(struct{}{}))
-
 	if insTyp.Kind() != reflect.Struct {
 		//log.Println(insTyp.Kind())
 		return reflect.ValueOf(nil), fmt.Errorf("initialization function support struct parameters(%s) only", insTyp.Name())
@@ -137,9 +135,38 @@ func createAndInitializeInstance(insTyp reflect.Type, reference DependencyRefere
 	}
 	stack.Inst = instPtrIf
 
+	if err := initializeInstance(insTyp, instValue, reference, forParameter); err != nil {
+		return reflect.ValueOf(nil), err
+	}
+
+	if injectMethod, ok := GetMethodForReceiverType(insTyp, "InjectDependency"); ok {
+		if err := CallDependencyInjection(injectMethod, instPtrIf, reference); err != nil {
+			return reflect.ValueOf(nil), err
+		}
+	}
+
+	return instPtrValue, nil
+
+}
+
+func initializeInstance(insTyp reflect.Type, instValue reflect.Value, reference DependencyReference, forParameter bool) error {
+	TypeOfType := reflect.TypeOf(reflect.TypeOf(struct{}{}))
+
 	for j := 0; j < insTyp.NumField(); j++ {
 		fieldSpec := insTyp.Field(j)
 		diTag, existingDiTag := fieldSpec.Tag.Lookup(TagName)
+		if fieldSpec.Type.Kind() == reflect.Struct {
+			if existingDiTag {
+				return fmt.Errorf("embedded/extended field can't do dependency injection, (%v)", fieldSpec)
+			}
+			// embedded/extended field with struct kind may contain dependency injection tag, initialize it
+			fmt.Printf("***** %v %d from %v \n", fieldSpec, j, insTyp)
+			instValForField := instValue.Field(j)
+			if err := initializeInstance(fieldSpec.Type, instValForField, reference, false); err != nil {
+				return err
+			}
+			continue
+		}
 		name := parseDiTag(diTag)
 		if name == "" {
 			if existingDiTag {
@@ -159,11 +186,11 @@ func createAndInitializeInstance(insTyp reflect.Type, reference DependencyRefere
 		}
 		//log.Printf("Field name: %s (%d) %v ", name, len(name), fieldSpec)
 		if l := len(name); l == 0 {
-			return reflect.ValueOf(nil), fmt.Errorf("not support anonymous name for dependency reference")
+			return fmt.Errorf("not support anonymous name for dependency reference")
 		} else if l == 1 {
 			c := name[0]
 			if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) {
-				return reflect.ValueOf(nil), fmt.Errorf("not support symbol '%c' as dependency reference", c)
+				return fmt.Errorf("not support symbol '%c' as dependency reference", c)
 			}
 		}
 		if LogEnabled {
@@ -174,13 +201,13 @@ func createAndInitializeInstance(insTyp reflect.Type, reference DependencyRefere
 			if reflect.TypeOf(v) == TypeOfType {
 				insTyp := v.(reflect.Type)
 				if insTyp.Kind() == reflect.Struct {
-					instPtrVal, err := createAndInitializeInstance(insTyp, reference, false, name)
+					instPtrValForField, err := createAndInitializeInstance(insTyp, reference, false, name)
 					if err != nil {
-						return reflect.ValueOf(nil), err
+						return err
 					}
-					inst := instPtrVal.Interface()
+					instForField := instPtrValForField.Interface()
 					//(*reference)[name] = inst
-					refValue = inst
+					refValue = instForField
 				} else {
 					// TODO: any good way?
 					refValue = v
@@ -190,17 +217,18 @@ func createAndInitializeInstance(insTyp reflect.Type, reference DependencyRefere
 			}
 		} else {
 			if fieldSpec.Type.Kind() == reflect.Pointer && fieldSpec.Type.Elem().Kind() == reflect.Struct {
+				// create and initialize instance
 				underlyingType := fieldSpec.Type.Elem()
-				instPtrVal, err := createAndInitializeInstance(underlyingType, reference, false, name)
+				instPtrValForField, err := createAndInitializeInstance(underlyingType, reference, false, name)
 				if err != nil {
-					return reflect.ValueOf(nil), err
+					return err
 				}
-				inst := instPtrVal.Interface()
+				instForField := instPtrValForField.Interface()
 				//(*reference)[name] = inst
-				refValue = inst
+				refValue = instForField
 			} else {
 				if forParameter {
-					return reflect.ValueOf(nil), fmt.Errorf("non available reference(%s) for injection", name)
+					return fmt.Errorf("non available reference(%s) for injection", name)
 				} else {
 					refValue = nil
 				}
@@ -223,19 +251,10 @@ func createAndInitializeInstance(insTyp reflect.Type, reference DependencyRefere
 				SetUnexportedField(field, refValue)
 			}
 		} else {
-			return reflect.ValueOf(nil),
-				fmt.Errorf("filed(%s)'s declaration(%v) and value(%v) are not same type", fieldSpec.Name, fieldSpec.Type, reflect.TypeOf(refValue))
+			return fmt.Errorf("filed(%s)'s declaration(%v) and value(%v) are not same type", fieldSpec.Name, fieldSpec.Type, reflect.TypeOf(refValue))
 		}
 	}
-
-	if injectMethod, ok := GetMethodForReceiverType(insTyp, "InjectDependency"); ok {
-		err := CallDependencyInjection(injectMethod, instPtrIf, reference)
-		if err != nil {
-			return reflect.ValueOf(nil), err
-		}
-	}
-
-	return instPtrValue, nil
+	return nil
 }
 
 // CreateInstance create an instance of rootTyp, the rootTyp should be kind of struct.

@@ -80,6 +80,24 @@ func (l *TestLib3) DidDependencyInitialization() {
 	fmt.Printf("TestLib3 - DidDependencyInitialization\n")
 }
 
+type TestBase struct {
+	lib1 *TestLib1 `di:"Lib1"`
+	lib2 *TestLib2 `di:"Lib2"`
+}
+
+type TestExt1 struct {
+	TestBase
+}
+
+type TestExt2 struct {
+	TestBase
+}
+
+type TestComb struct {
+	ext1 *TestExt1 `di:""`
+	ext2 *TestExt2 `di:""`
+}
+
 // go test ./dij -v -run TestDI
 func TestDI(t *testing.T) {
 	t.Run("simple", func(t *testing.T) {
@@ -99,7 +117,7 @@ func TestDI(t *testing.T) {
 		if _, ok := inst.(*TestApp); ok {
 			//fmt.Println("Inst type:", reflect.TypeOf(inst))
 		} else {
-			t.Fatal("didn't create a create instance, ", reflect.TypeOf(inst))
+			t.Fatal("didn't create a correct instance, ", reflect.TypeOf(inst))
 		}
 
 		if count := GetCountOfDependencyStack(&ref); count != 0 {
@@ -121,5 +139,23 @@ func TestDI(t *testing.T) {
 				}
 			}
 		}
+	})
+
+	t.Run("share", func(t *testing.T) {
+		comboType := reflect.TypeOf(TestComb{})
+		ref := map[DependencyKey]any{}
+		config := map[string]any{}
+		ref["config"] = config
+		EnableLog()
+		inst, err := CreateInstance(comboType, &ref, "^")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, ok := inst.(*TestComb); ok {
+			//fmt.Println("Inst type:", reflect.TypeOf(inst))
+		} else {
+			t.Fatal("didn't create a correct instance, ", reflect.TypeOf(inst))
+		}
+		// TODO: implement dependency injection from base struct
 	})
 }
