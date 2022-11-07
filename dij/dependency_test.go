@@ -108,7 +108,7 @@ func TestDI(t *testing.T) {
 			"port": 3345,
 		}
 		ref["config"] = config
-		EnableLog()
+		//EnableLog() // uncomment for debug
 
 		inst, err := CreateInstance(appTyp, &ref, "^")
 		if err != nil {
@@ -146,7 +146,7 @@ func TestDI(t *testing.T) {
 		ref := map[DependencyKey]any{}
 		config := map[string]any{}
 		ref["config"] = config
-		EnableLog()
+		//EnableLog() // uncomment for debug
 		inst, err := CreateInstance(comboType, &ref, "^")
 		if err != nil {
 			t.Fatal(err)
@@ -156,6 +156,26 @@ func TestDI(t *testing.T) {
 		} else {
 			t.Fatal("didn't create a correct instance, ", reflect.TypeOf(inst))
 		}
-		// TODO: implement dependency injection from base struct
+
+		if count := GetCountOfDependencyStack(&ref); count != 0 {
+			t.Errorf("incorrect stack count: %d", count)
+		}
+
+		if stack := GetHistoryOfDependencyStack(&ref); stack == nil {
+			t.Errorf("empty stack, why?")
+		} else {
+			checks := map[int]string{
+				0: "*dij.TestComb",
+				1: "*dij.TestExt1",
+				2: "*dij.TestLib1",
+				4: "*dij.TestLib2",
+				6: "*dij.TestExt2",
+			}
+			for k, v := range checks {
+				if name := stack.GetRecord(k).NameOfInstType(); name != v {
+					t.Errorf("incorrect stack record: %v, type should be: %s != %s", stack.GetRecord(k), v, name)
+				}
+			}
+		}
 	})
 }
