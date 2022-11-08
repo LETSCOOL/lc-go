@@ -160,7 +160,7 @@ func initializeInstance(insTyp reflect.Type, instValue reflect.Value, reference 
 				return fmt.Errorf("embedded/extended field can't do dependency injection, (%v)", fieldSpec)
 			}
 			// embedded/extended field with struct kind may contain dependency injection tag, initialize it
-			fmt.Printf("***** %v %d from %v \n", fieldSpec, j, insTyp)
+			// fmt.Printf("***** %v %d from %v \n", fieldSpec, j, insTyp)
 			instValForField := instValue.Field(j)
 			if err := initializeInstance(fieldSpec.Type, instValForField, reference, false); err != nil {
 				return err
