@@ -96,3 +96,22 @@ func TestEmbeddedField(t *testing.T) {
 		fmt.Printf("\tcounter: %d\n", e02.counter)
 	})
 }
+
+// go test ./lg -v -run TestIfe
+func TestIfe(t *testing.T) {
+	t.Run("string", func(t *testing.T) {
+		text := ""
+		text = Ife(len(text) != 0, text, "some text")
+		if text != "some text" {
+			t.Errorf("incorrect")
+		}
+	})
+
+	t.Run("int", func(t *testing.T) {
+		i := 0
+		i = Ife(i != 0, i, 123)
+		if i != 123 {
+			t.Errorf("incorrect")
+		}
+	})
+}
