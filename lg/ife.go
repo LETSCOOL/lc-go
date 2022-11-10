@@ -34,7 +34,7 @@ func IfeI(condition bool, ifValue int, elseValue int) int {
 }
 
 // Ife 用來替代 golang 不支援 "?:" 的語法。
-func Ife[T string | bool | int](condition bool, ifValue T, elseValue T) T {
+func Ife[T string | bool | int | any](condition bool, ifValue T, elseValue T) T {
 	if condition {
 		return ifValue
 	} else {

@@ -5,11 +5,11 @@ import (
 	. "github.com/letscool/lc-go/lg"
 	"log"
 	"reflect"
-	"strings"
 )
 
 type DependencyKey = string
-type DependencyReference *map[DependencyKey]any
+type DependencyReference map[DependencyKey]any
+type DependencyReferencePtr = *DependencyReference
 type DependencyStack []*DependencyStackRecord
 
 func (s DependencyStack) NumOfRecords() int {
@@ -18,6 +18,28 @@ func (s DependencyStack) NumOfRecords() int {
 
 func (s DependencyStack) GetRecord(index int) *DependencyStackRecord {
 	return s[index]
+}
+
+// Get retrieves the dependent object.
+func (r DependencyReferencePtr) Get(key string) any {
+	return (*r)[key]
+}
+
+// StackCount shows current stack count when running dependency inject.
+// It should always be zero after run over CreateInstance.
+// Just for debug.
+func (r DependencyReferencePtr) StackCount() int {
+	return (*r)[StackDeepKey].(int)
+}
+
+// StackHistory retrieves the history for running dependency injection
+func (r DependencyReferencePtr) StackHistory() (stack DependencyStack) {
+	if stackSlice, existing := (*r)[StackKey]; !existing {
+		return nil
+	} else {
+		slice := stackSlice.(DependencyStack)
+		return slice
+	}
 }
 
 const (
@@ -57,7 +79,7 @@ func EnableLog() {
 	LogEnabled = true
 }
 
-func CallDependencyInjection(initMethod reflect.Method, inst any, reference DependencyReference) error {
+func CallDependencyInjection(initMethod reflect.Method, inst any, reference DependencyReferencePtr) error {
 	methodTyp := initMethod.Type
 	//log.Println(methodTyp.NumIn())
 	if methodTyp.NumIn() <= 0 {
@@ -86,7 +108,7 @@ func CallDependencyInjection(initMethod reflect.Method, inst any, reference Depe
 	return nil
 }
 
-func createAndInitializeInstance(insTyp reflect.Type, reference DependencyReference, forParameter bool, applyingName string) (reflect.Value, error) {
+func createAndInitializeInstance(insTyp reflect.Type, reference DependencyReferencePtr, forParameter bool, applyingName string) (reflect.Value, error) {
 	// ================================
 	// save stack
 	stack := &DependencyStackRecord{
@@ -146,19 +168,19 @@ func createAndInitializeInstance(insTyp reflect.Type, reference DependencyRefere
 	}
 
 	return instPtrValue, nil
-
 }
 
-func initializeInstance(insTyp reflect.Type, instValue reflect.Value, reference DependencyReference, forParameter bool) error {
+func initializeInstance(insTyp reflect.Type, instValue reflect.Value, reference DependencyReferencePtr, forParameter bool) error {
 	TypeOfType := reflect.TypeOf(reflect.TypeOf(struct{}{}))
 
 	for j := 0; j < insTyp.NumField(); j++ {
+		diTag, err := ParseDiTag(insTyp, j)
+		if err != nil {
+			return err
+		}
+
 		fieldSpec := insTyp.Field(j)
-		diTag, existingDiTag := fieldSpec.Tag.Lookup(TagName)
 		if fieldSpec.Type.Kind() == reflect.Struct {
-			if existingDiTag {
-				return fmt.Errorf("embedded/extended field can't do dependency injection, (%v)", fieldSpec)
-			}
 			// embedded/extended field with struct kind may contain dependency injection tag, initialize it
 			// fmt.Printf("***** %v %d from %v \n", fieldSpec, j, insTyp)
 			instValForField := instValue.Field(j)
@@ -167,41 +189,20 @@ func initializeInstance(insTyp reflect.Type, instValue reflect.Value, reference 
 			}
 			continue
 		}
-		name := parseDiTag(diTag)
-		if name == "" {
-			if existingDiTag {
-				name = fieldSpec.Name
-				if name == "" || name == "_" {
-					name = FullnameOfType(fieldSpec.Type)
-				}
-			} else {
-				// do not be referred for dependency injection
-				continue
-			}
-		} else if name == "-" {
-			// do not be referred for dependency injection
+
+		if !diTag.Enabled {
 			continue
-		} else if name == "^" {
-			name = FullnameOfType(fieldSpec.Type)
 		}
-		//log.Printf("Field name: %s (%d) %v ", name, len(name), fieldSpec)
-		if l := len(name); l == 0 {
-			return fmt.Errorf("not support anonymous name for dependency reference")
-		} else if l == 1 {
-			c := name[0]
-			if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) {
-				return fmt.Errorf("not support symbol '%c' as dependency reference", c)
-			}
-		}
+
 		if LogEnabled {
-			log.Printf("Field name: %s for %v", name, fieldSpec)
+			log.Printf("Field name: %s for %v", diTag.name, fieldSpec)
 		}
 		var refValue any
-		if v, existing := (*reference)[name]; existing {
+		if v, existing := (*reference)[diTag.name]; existing {
 			if reflect.TypeOf(v) == TypeOfType {
 				insTyp := v.(reflect.Type)
 				if insTyp.Kind() == reflect.Struct {
-					instPtrValForField, err := createAndInitializeInstance(insTyp, reference, false, name)
+					instPtrValForField, err := createAndInitializeInstance(insTyp, reference, false, diTag.name)
 					if err != nil {
 						return err
 					}
@@ -219,7 +220,7 @@ func initializeInstance(insTyp reflect.Type, instValue reflect.Value, reference 
 			if fieldSpec.Type.Kind() == reflect.Pointer && fieldSpec.Type.Elem().Kind() == reflect.Struct {
 				// create and initialize instance
 				underlyingType := fieldSpec.Type.Elem()
-				instPtrValForField, err := createAndInitializeInstance(underlyingType, reference, false, name)
+				instPtrValForField, err := createAndInitializeInstance(underlyingType, reference, false, diTag.name)
 				if err != nil {
 					return err
 				}
@@ -228,7 +229,7 @@ func initializeInstance(insTyp reflect.Type, instValue reflect.Value, reference 
 				refValue = instForField
 			} else {
 				if forParameter {
-					return fmt.Errorf("non available reference(%s) for injection", name)
+					return fmt.Errorf("non available reference(%s) for injection", diTag.name)
 				} else {
 					refValue = nil
 				}
@@ -260,9 +261,9 @@ func initializeInstance(insTyp reflect.Type, instValue reflect.Value, reference 
 // CreateInstance create an instance of rootTyp, the rootTyp should be kind of struct.
 //
 // A pointer of an instance for rootTyp will be returned if success.
-func CreateInstance(rootTyp reflect.Type, reference DependencyReference, instName string) (any, error) {
-	if reference == nil {
-		reference = &map[DependencyKey]any{}
+func CreateInstance(rootTyp reflect.Type, referencePtr DependencyReferencePtr, instName string) (any, error) {
+	if referencePtr == nil {
+		referencePtr = &DependencyReference{}
 	}
 
 	if instName == "^" || instName == "" || instName == "_" {
@@ -271,17 +272,17 @@ func CreateInstance(rootTyp reflect.Type, reference DependencyReference, instNam
 	//	log.Printf("Root instance doesn't support empty name. If you use empty name, it will not be referred in dependency-injection flow.")
 	//}
 
-	instPtrValue, err := createAndInitializeInstance(rootTyp, reference, false, instName)
+	instPtrValue, err := createAndInitializeInstance(rootTyp, referencePtr, false, instName)
 	if err != nil {
 		return nil, err
 	}
 	instPtrIf := instPtrValue.Interface()
 
-	if deepCount := (*reference)[StackDeepKey].(int); deepCount != 0 {
+	if deepCount := (*referencePtr)[StackDeepKey].(int); deepCount != 0 {
 		return nil, fmt.Errorf("incorrect final stack deep count(%d)", deepCount)
 	}
 
-	if stackSlice, existing := (*reference)[StackKey]; existing {
+	if stackSlice, existing := (*referencePtr)[StackKey]; existing {
 		slice := stackSlice.(DependencyStack)
 		if LogEnabled {
 			for _, stack := range slice {
@@ -308,31 +309,52 @@ func CreateInstance(rootTyp reflect.Type, reference DependencyReference, instNam
 	return instPtrIf, nil
 }
 
-func GetCountOfDependencyStack(ref DependencyReference) int {
-	return (*ref)[StackDeepKey].(int)
+type DiTag struct {
+	Exists  bool   // explicitly set tag string, the value false means doesn't use Dependency Injection.
+	Enabled bool   // the tag with '-' name means not enable explicitly, the value false means doesn't use Dependency Injection.
+	origin  string // origin tag text
+	name    string // the name for dependency injection
+	attrs   StructTagAttrs
 }
 
-func GetHistoryOfDependencyStack(ref DependencyReference) (stack DependencyStack) {
-	if stackSlice, existing := (*ref)[StackKey]; !existing {
-		return nil
-	} else {
-		slice := stackSlice.(DependencyStack)
-		return slice
+// ParseDiTag parses the tag with 'di' key.
+func ParseDiTag(insTyp reflect.Type, fieldIndex int) (diTag DiTag, err error) {
+	fieldSpec := insTyp.Field(fieldIndex)
+	diTag.origin, diTag.Exists = fieldSpec.Tag.Lookup(TagName)
+	diTag.Enabled = diTag.Exists
+	if !diTag.Exists {
+		// really no tag, don't involved this field
+		return
 	}
-}
-
-// parseDiTag parses the tag with 'di' key.
-//
-// TODO: complete the algorithm.
-func parseDiTag(tag string) (name string) {
-	segments := Map(strings.Split(tag, ","), func(in string) string {
-		return strings.TrimSpace(in)
-	})
-
-	if len(segments) > 0 {
-		name = segments[0]
-	} else {
-		name = ""
+	if fieldSpec.Type.Kind() == reflect.Struct {
+		err = fmt.Errorf("embedded/extended field doesn't do dependency injection, (%v)", fieldSpec)
+		return
+	}
+	diTag.attrs = ParseStructTag(diTag.origin)
+	nameAttr, existsName := diTag.attrs.FirstAttrWithValOnly()
+	diTag.name = Ife(existsName, nameAttr.Val, "")
+	if diTag.name == "" {
+		diTag.name = fieldSpec.Name
+		if diTag.name == "" || diTag.name == "_" {
+			diTag.name = FullnameOfType(fieldSpec.Type)
+		}
+	} else if diTag.name == "-" {
+		// do not be referred for dependency injection
+		diTag.Enabled = false
+		return
+	} else if diTag.name == "^" {
+		diTag.name = FullnameOfType(fieldSpec.Type)
+	}
+	//log.Printf("Field name: %s (%d) %v ", name, len(name), fieldSpec)
+	if l := len(diTag.name); l == 0 {
+		err = fmt.Errorf("not support anonymous name for dependency reference")
+		return
+	} else if l == 1 {
+		c := diTag.name[0]
+		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) {
+			err = fmt.Errorf("not support symbol '%c' as dependency reference", c)
+			return
+		}
 	}
 	return
 }

@@ -102,7 +102,7 @@ type TestComb struct {
 func TestDI(t *testing.T) {
 	t.Run("simple", func(t *testing.T) {
 		appTyp := reflect.TypeOf(TestApp{})
-		ref := map[DependencyKey]any{}
+		ref := DependencyReference{}
 		config := map[string]any{
 			"ip":   "192.168.0.1",
 			"port": 3345,
@@ -120,11 +120,11 @@ func TestDI(t *testing.T) {
 			t.Fatal("didn't create a correct instance, ", reflect.TypeOf(inst))
 		}
 
-		if count := GetCountOfDependencyStack(&ref); count != 0 {
+		if count := ref.StackCount(); count != 0 {
 			t.Errorf("incorrect stack count: %d", count)
 		}
 
-		if stack := GetHistoryOfDependencyStack(&ref); stack == nil {
+		if stack := ref.StackHistory(); stack == nil {
 			t.Errorf("empty stack, why?")
 		} else {
 			checks := map[int]string{
@@ -143,7 +143,7 @@ func TestDI(t *testing.T) {
 
 	t.Run("share", func(t *testing.T) {
 		comboType := reflect.TypeOf(TestComb{})
-		ref := map[DependencyKey]any{}
+		ref := DependencyReference{}
 		config := map[string]any{}
 		ref["config"] = config
 		//EnableLog() // uncomment for debug
@@ -157,11 +157,11 @@ func TestDI(t *testing.T) {
 			t.Fatal("didn't create a correct instance, ", reflect.TypeOf(inst))
 		}
 
-		if count := GetCountOfDependencyStack(&ref); count != 0 {
+		if count := ref.StackCount(); count != 0 {
 			t.Errorf("incorrect stack count: %d", count)
 		}
 
-		if stack := GetHistoryOfDependencyStack(&ref); stack == nil {
+		if stack := ref.StackHistory(); stack == nil {
 			t.Errorf("empty stack, why?")
 		} else {
 			checks := map[int]string{
@@ -197,7 +197,7 @@ type SampleLib2 struct {
 func TestSample(t *testing.T) {
 	t.Run("sample", func(t *testing.T) {
 		appTyp := reflect.TypeOf(SampleApp{})
-		ref := map[DependencyKey]any{"val": 123}
+		ref := DependencyReference{"val": 123}
 		inst, err := CreateInstance(appTyp, &ref, "^")
 		if err != nil {
 			t.Fatal(err)

@@ -16,7 +16,7 @@ A golang library, include following packages:
     i = Ife(i != 0, i, 123)
     ```
 - MakeIterator, MakeInverseIterator
-    ```go
+    ```go 
     ints := []int{0, 10, 20, 30, 40, 50, 60, 70, 80, 90}
     iter := MakeIterator(ints)
     totalValues := 0
@@ -46,7 +46,7 @@ A golang library, include following packages:
 ### mongobj (MongoDb Object)
 (omit)
 
-### dij (Dependency Injection)
+### dij (Dependency Injection) - **draft**
 Sample code
 ```go
 type SampleApp struct {
@@ -66,7 +66,7 @@ type SampleLib2 struct {
 func TestSample(t *testing.T) {
 	t.Run("sample", func(t *testing.T) {
 		appTyp := reflect.TypeOf(SampleApp{})
-		ref := map[DependencyKey]any{"val": 123}
+		ref := DependencyReference{"val": 123}
 		inst, err := CreateInstance(appTyp, &ref, "^")
 		if err != nil {
 			t.Fatal(err)
