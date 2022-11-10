@@ -21,8 +21,19 @@ func (s DependencyStack) GetRecord(index int) *DependencyStackRecord {
 }
 
 // Get retrieves the dependent object.
-func (r DependencyReferencePtr) Get(key string) any {
-	return (*r)[key]
+func (r DependencyReferencePtr) Get(key string) (any, bool) {
+	inst, ok := (*r)[key]
+	return inst, ok
+}
+
+// GetForDiField retrieves the injected instance for field
+func (r DependencyReferencePtr) GetForDiField(insTyp reflect.Type, fieldIndex int) (any, bool) {
+	diTag, err := ParseDiTag(insTyp, fieldIndex)
+	if err == nil && diTag.Exists && diTag.Enabled {
+		inst, ok := (*r)[diTag.name]
+		return inst, ok
+	}
+	return nil, false
 }
 
 // StackCount shows current stack count when running dependency inject.
