@@ -47,7 +47,7 @@ A golang library, include following packages:
 (omit)
 
 ### dij (Dependency Injection) - **draft**
-Sample code
+- Sample code
 ```go
 type SampleApp struct {
 	lib1 *SampleLib1 `di:"lib1"`
@@ -84,3 +84,6 @@ func TestSample(t *testing.T) {
 	})
 }
 ```
+
+- Libraries/Services refer dij
+  - [dij-gin](https://github.com/LETSCOOL/dij-gin): dij-style gin library, gin library but wrap it by dij. 

@@ -344,7 +344,7 @@ func ParseDiTag(insTyp reflect.Type, fieldIndex int) (diTag DiTag, err error) {
 	diTag.attrs = ParseStructTag(diTag.origin)
 	nameAttr, existsName := diTag.attrs.FirstAttrWithValOnly()
 	diTag.name = Ife(existsName, nameAttr.Val, "")
-	if diTag.name == "" {
+	if diTag.name == "" || diTag.name == "_" {
 		diTag.name = fieldSpec.Name
 		if diTag.name == "" || diTag.name == "_" {
 			diTag.name = FullnameOfType(fieldSpec.Type)

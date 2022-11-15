@@ -1,6 +1,7 @@
 package dij
 
 import (
+	"fmt"
 	"reflect"
 	"unsafe"
 )
@@ -27,5 +28,10 @@ func FullnameOfType(typ reflect.Type) string {
 		name += "*"
 		typ = typ.Elem()
 	}
-	return typ.PkgPath() + "/" + typ.Name() + name
+	switch typ.Kind() {
+	case reflect.Struct, reflect.Interface:
+		return fmt.Sprintf("%s/%s%s", typ.PkgPath(), typ.Name(), name)
+	default:
+		return fmt.Sprintf("%s/%s", typ.PkgPath(), typ)
+	}
 }

@@ -214,3 +214,43 @@ func TestSample(t *testing.T) {
 		}
 	})
 }
+
+type DijParserSample struct {
+	TestBase
+	untitled  string
+	empty     int            `di:""`
+	underline []int          `di:"_"`
+	upper     map[int]string `di:"^"`
+	disabled  any            `di:"-"`
+}
+
+// go test ./dij -v -run TestDijParser
+func TestDijParser(t *testing.T) {
+	t.Run("fields", func(t *testing.T) {
+		list := map[int]struct {
+			name    string
+			enabled bool
+		}{
+			0: {"", false},
+			1: {"", false},
+			2: {"empty", true},
+			3: {"underline", true},
+			4: {"/map[int]string", true},
+			5: {"-", false},
+		}
+		typ := reflect.TypeOf(DijParserSample{})
+		//pri := reflect.TypeOf(map[int]string{1: "234"})
+		//t.Logf("====== %s, %v\n", FullnameOfType(pri), pri)
+		for n, result := range list {
+			if diTag, err := ParseDiTag(typ, n); err != nil {
+				t.Errorf("%d [%v] error: %v\n", n, typ.Field(n), err)
+			} else {
+				if diTag.name != result.name || diTag.Enabled != result.enabled {
+					t.Errorf("%d [%v] error, diTAg: %v, correct result: %v\n", n, typ.Field(n), diTag, result)
+				} else {
+					//t.Logf("%d [%v] correct, diTag: %v\n", n, typ.Field(n), diTag)
+				}
+			}
+		}
+	})
+}

@@ -1,6 +1,7 @@
 package lg
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
 )
@@ -57,6 +58,21 @@ func TestParseStructTag(t *testing.T) {
 
 		if first, exists := attrsObj.FirstAttrsWithKey("c"); !exists || first.Key != "c" || first.Val != "ccc" {
 			t.Errorf("error: %v, %v", first, exists)
+		}
+	})
+}
+
+// go test ./lg -v -run TestUnmarshal
+func TestUnmarshal(t *testing.T) {
+	t.Run("all types", func(t *testing.T) {
+		var i int16
+		if err := json.Unmarshal([]byte("123"), &i); err != nil {
+			t.Error(err)
+		} else {
+			if i != 123 {
+				t.Errorf("incorrect value: %d", i)
+			}
+			//t.Log(i)
 		}
 	})
 }
