@@ -1,6 +1,5 @@
 module github.com/letscool/lc-go
 
-
 go 1.19
 
 require (

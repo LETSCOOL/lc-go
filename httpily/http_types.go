@@ -1,3 +1,7 @@
+// Copyright 2022 Yuchi Chen. All rights reserved.
+// Use of this source code is governed by a MIT style
+// license that can be found in the LICENSE file.
+
 // Package httpily
 // 提供 http 輸入輸出的協助工具
 package httpily
@@ -36,7 +40,8 @@ type HttpGeneralResponse struct {
 // ExportJsonResponse 輸出標準的json response
 // 如果 message 為 error 類型或者 status 為 4xx 或者 5xx，輸出為 HttpErrorResponse 結構。
 // 否則一律輸出為 HttpGeneralResponse 結構。
-// 	TODO: 也許有一天 ctx 要使用 generic type 來支援各種 web server
+//
+//	TODO: 也許有一天 ctx 要使用 generic type 來支援各種 web server
 func ExportJsonResponse(ctx *gin.Context, status int, message interface{}) {
 	switch v := message.(type) {
 	case error:
@@ -72,7 +77,8 @@ func ExportJsonResponse(ctx *gin.Context, status int, message interface{}) {
 
 // ExportJsonError creates an error response
 // err 若為 error 型態，則會藉由 error.Error() 當作回傳訊息，而其它的型別則都透過 fmt.Sprint() 輸出為字串。
-//   TODO: 也許有一天 ctx 要使用 generic type 來支援各種 web server
+//
+//	TODO: 也許有一天 ctx 要使用 generic type 來支援各種 web server
 func ExportJsonError(ctx *gin.Context, status int, err interface{}) {
 	var message string
 	switch v := err.(type) {

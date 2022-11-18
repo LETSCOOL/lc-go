@@ -1,4 +1,8 @@
 #!/bin/bash
+# Copyright 2022 Yuchi Chen. All rights reserved.
+# Use of this source code is governed by a MIT style
+# license that can be found in the LICENSE file.
+
 # 執行的目錄與與產生的 env 檔案相同
 # 複製來源：lc-go/lg/gen_version_env.sh
 

@@ -1,3 +1,7 @@
+// Copyright 2022 Yuchi Chen. All rights reserved.
+// Use of this source code is governed by a MIT style
+// license that can be found in the LICENSE file.
+
 package lg
 
 func Map[IN string | bool | int | any, OUT string | bool | int | any](list []IN, f func(v IN) OUT) []OUT {

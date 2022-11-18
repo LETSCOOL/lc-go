@@ -1,6 +1,11 @@
+// Copyright 2022 Yuchi Chen. All rights reserved.
+// Use of this source code is governed by a MIT style
+// license that can be found in the LICENSE file.
+
 /*
 Package mongobj implements a simple interface to access mongodb.
 將自定義的資料結構藉由Primary Key存入與取出mongodb，而不使用內建的ObjectID(_id)。
+
 	TODO: 將此package移動到獨立的repo
 */
 package mongobj
@@ -67,6 +72,7 @@ type Mongolection struct {
 /*
 InitializeUniqueKey
 用來初始化Primary Key，多次設定相同的schema不會造成問題，這個package目前基於pk來存取物件。
+
 	TODO: 怎麼有效讓程式碼只設定一次。因為檢查與設定大概都會消耗存取次數，基本上應該沒什麼太大差別？
 */
 func (m *Mongolection) InitializeUniqueKey(keys ...string) error {
@@ -117,6 +123,7 @@ func (m *Mongolection) InitializeUniqueKey(keys ...string) error {
 Get will find values for pk.
 If there are no values for pk, nil without error will be returned.
 藉由primary key取回自定義資料結構，取回為自定義資料結構的指標。
+
 	Ex.
 		_ = m.Get(bson.M{"PK": "1234567"}, reflect.TypeOf(MyStructure{})).(*MyStructure)
 */
@@ -143,6 +150,7 @@ func (m *Mongolection) Get(pk bson.M, resultType reflect.Type) (interface{}, err
 
 /*
 Set will upsert values for pk, values should include pk.
+
 	Ex.
 		type MyStructure struct {
 			ID primitive.ObjectID `json:"-" bson:"_id,omitempty"`
