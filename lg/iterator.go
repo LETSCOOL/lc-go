@@ -4,6 +4,15 @@
 
 package lg
 
+func Contains[T comparable](slice []T, v T) bool {
+	for _, s := range slice {
+		if s == v {
+			return true
+		}
+	}
+	return false
+}
+
 func Map[IN string | bool | int | any, OUT string | bool | int | any](list []IN, f func(v IN) OUT) []OUT {
 	out := make([]OUT, 0, len(list))
 	for _, i := range list {

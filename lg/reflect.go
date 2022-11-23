@@ -11,29 +11,36 @@ type StructTagAttrs struct {
 	attrs    []StructTagAttr
 }
 
-func (a StructTagAttrs) Attrs() []StructTagAttr {
+func (a *StructTagAttrs) Attrs() []StructTagAttr {
 	return a.attrs
 }
 
-func (a StructTagAttrs) AttrsWithValOnly() []StructTagAttr {
+func (a *StructTagAttrs) AttrsWithValOnly() []StructTagAttr {
 	return Filter(a.attrs, func(attr StructTagAttr) bool {
 		return attr.ValOnly
 	})
 }
 
-func (a StructTagAttrs) FirstAttrWithValOnly() (attr StructTagAttr, exists bool) {
+func (a *StructTagAttrs) ContainsAttrWithValOnly(val string) bool {
+	_, exists := FilterFirst(a.attrs, func(attr StructTagAttr) bool {
+		return attr.ValOnly && attr.Val == val
+	})
+	return exists
+}
+
+func (a *StructTagAttrs) FirstAttrWithValOnly() (attr StructTagAttr, exists bool) {
 	return FilterFirst(a.attrs, func(attr StructTagAttr) bool {
 		return attr.ValOnly
 	})
 }
 
-func (a StructTagAttrs) AttrsWithKey() []StructTagAttr {
+func (a *StructTagAttrs) AttrsWithKey() []StructTagAttr {
 	return Filter(a.attrs, func(attr StructTagAttr) bool {
 		return !attr.ValOnly
 	})
 }
 
-func (a StructTagAttrs) FirstAttrsWithKey(key string) (attr StructTagAttr, exists bool) {
+func (a *StructTagAttrs) FirstAttrsWithKey(key string) (attr StructTagAttr, exists bool) {
 	return FilterFirst(a.attrs, func(attr StructTagAttr) bool {
 		return !attr.ValOnly && attr.Key == key
 	})
