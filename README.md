@@ -92,17 +92,17 @@ func main() {
 Following code uses *BuildInstance* instance of *CreateInstance*, it should be an easier way.
 ```go
 func main() {
-	ref := DependencyReference{"val": 123}
-	app, err := BuildInstance(&SampleApp{}, &ref, "^")
-	if err != nil {
-		log.Fatal(err)
-	}
-	if app.lib2 != app.lib1.lib2 {
-		log.Fatalf("incorrect injection, app.lib2(%v) != app.lib1.lib2(%v)\n", app.lib2, app.lib1.lib2)
-	}
-	if app.lib2.val != 123 {
-		log.Fatalf("incorrect injection, app.lib2.val(%d) != 123\n", app.lib2.val)
-	}
+  ref := DependencyReference{"val": 123}
+  app, err := BuildInstance(&SampleApp{}, &ref, "^")
+  if err != nil {
+    log.Fatal(err)
+  }
+  if app.lib2 != app.lib1.lib2 {
+    log.Fatalf("incorrect injection, app.lib2(%v) != app.lib1.lib2(%v)\n", app.lib2, app.lib1.lib2)
+  }
+  if app.lib2.val != 123 {
+    log.Fatalf("incorrect injection, app.lib2.val(%d) != 123\n", app.lib2.val)
+  }
 }
 ```
 

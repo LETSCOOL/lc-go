@@ -64,6 +64,19 @@ func TestParseStructTag(t *testing.T) {
 			t.Errorf("error: %v, %v", first, exists)
 		}
 	})
+	t.Run("NoFirst", func(t *testing.T) {
+		attrsObj := ParseStructTag("b=bb,c=ccc, d")
+		if _, exists := attrsObj.FirstAttrWithValOnly(); exists {
+			t.Errorf("First attr should not exists")
+		}
+	})
+	t.Run("EmptyFirst", func(t *testing.T) {
+		attrsObj := ParseStructTag(",b=bb,c=ccc, d")
+		if attr, exists := attrsObj.FirstAttrWithValOnly(); !exists || attr.Val != "" {
+			t.Errorf("First attr should be emtpy string(%v, %v)", exists, attr)
+		}
+	})
+
 }
 
 // go test ./lg -v -run TestUnmarshal

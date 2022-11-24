@@ -21,7 +21,7 @@ func IsTypeInstance(inst any) bool {
 
 type StructTagAttrs struct {
 	segments []string
-	attrs    []StructTagAttr
+	attrs    []StructTagAttr // in order, same order as segments
 }
 
 func (a *StructTagAttrs) Attrs() []StructTagAttr {
@@ -42,9 +42,12 @@ func (a *StructTagAttrs) ContainsAttrWithValOnly(val string) bool {
 }
 
 func (a *StructTagAttrs) FirstAttrWithValOnly() (attr StructTagAttr, exists bool) {
-	return FilterFirst(a.attrs, func(attr StructTagAttr) bool {
-		return attr.ValOnly
-	})
+	if len(a.attrs) > 0 {
+		if attr := a.attrs[0]; attr.ValOnly {
+			return attr, true
+		}
+	}
+	return
 }
 
 func (a *StructTagAttrs) AttrsWithKey() []StructTagAttr {
