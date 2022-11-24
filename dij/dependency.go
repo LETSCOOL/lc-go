@@ -160,7 +160,7 @@ func createAndInitializeInstance(instOrType any, reference DependencyReferencePt
 		instPtrValue = reflect.New(insTyp)
 	} else {
 		insTyp = reflect.TypeOf(instOrType).Elem()
-		fmt.Printf("***** %v *****\n", insTyp)
+		//fmt.Printf("***** %v *****\n", insTyp)
 		instPtrValue = reflect.ValueOf(instOrType)
 		if instPtrValue.IsZero() {
 			instPtrValue = reflect.New(insTyp)
