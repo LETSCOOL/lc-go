@@ -226,6 +226,9 @@ func initializeInstance(insTyp reflect.Type, instValue reflect.Value, reference 
 		}
 		var refValue any
 		if v, existing := (*reference)[diTag.name]; existing {
+			if LogEnabled {
+				log.Printf("\tField name: %s exists %v", diTag.name, v)
+			}
 			if reflect.TypeOf(v) == TypeOfType {
 				insTyp := v.(reflect.Type)
 				if insTyp.Kind() == reflect.Struct {
@@ -244,6 +247,9 @@ func initializeInstance(insTyp reflect.Type, instValue reflect.Value, reference 
 				refValue = v
 			}
 		} else {
+			if LogEnabled {
+				log.Printf("\tField name: %s doesn't exists", diTag.name)
+			}
 			if fieldSpec.Type.Kind() == reflect.Pointer && fieldSpec.Type.Elem().Kind() == reflect.Struct {
 				// create and initialize instance
 				underlyingType := fieldSpec.Type.Elem()
@@ -271,7 +277,7 @@ func initializeInstance(insTyp reflect.Type, instValue reflect.Value, reference 
 			}
 			//field := instValue.FieldByName(fieldSpec.Name)
 			firstChar := fieldSpec.Name[0]
-			if firstChar == '_' {
+			if firstChar == '_' && len(fieldSpec.Name) == 1 {
 				// don't assign
 			} else if firstChar >= 'A' && firstChar <= 'Z' {
 				field.Set(reflect.ValueOf(refValue))
