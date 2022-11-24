@@ -185,8 +185,9 @@ func TestDI(t *testing.T) {
 }
 
 type SampleApp struct {
-	lib1 *SampleLib1 `di:"lib1"`
-	lib2 *SampleLib2 `di:"lib2"`
+	lib1    *SampleLib1 `di:"lib1"`
+	lib2    *SampleLib2 `di:"lib2"`
+	testInt int
 }
 
 type SampleLib1 struct {
@@ -257,4 +258,47 @@ func TestDijParser(t *testing.T) {
 			}
 		}
 	})
+}
+
+// go test ./dij -v -run TestDijBuild
+func TestDijBuild(t *testing.T) {
+	t.Run("exist", func(t *testing.T) {
+		ref := DependencyReference{"val": 123}
+		//var ptr *SampleApp
+		ptr := &SampleApp{}
+		ptr.testInt = 199
+		t.Logf("ptr value: %p\n", ptr)
+		ptr2, err := BuildInstance(ptr, &ref, "^")
+		if err != nil {
+			t.Error(err)
+		}
+		t.Logf("ptr, ptr2 value: %p, %p\n", ptr, ptr2)
+		if ptr2.lib2 != ptr2.lib1.lib2 {
+			t.Errorf("incorrect injection, app.lib2(%v) != app.lib1.lib2(%v)\n", ptr2.lib2, ptr2.lib1.lib2)
+		}
+		if ptr2.lib2.val != 123 {
+			t.Errorf("incorrect injection, app.lib2.val(%d) != 123\n", ptr2.lib2.val)
+		}
+		if ptr2.testInt != 199 {
+			t.Errorf("testInt value changed: %d\n", ptr2.testInt)
+		}
+	})
+
+	t.Run("zero", func(t *testing.T) {
+		ref := DependencyReference{"val": 123}
+		var ptr *SampleApp
+		t.Logf("ptr value: %p\n", ptr)
+		ptr2, err := BuildInstance(ptr, &ref, "^")
+		if err != nil {
+			t.Error(err)
+		}
+		t.Logf("ptr, ptr2 value: %p, %p\n", ptr, ptr2)
+		if ptr2.lib2 != ptr2.lib1.lib2 {
+			t.Errorf("incorrect injection, app.lib2(%v) != app.lib1.lib2(%v)\n", ptr2.lib2, ptr2.lib1.lib2)
+		}
+		if ptr2.lib2.val != 123 {
+			t.Errorf("incorrect injection, app.lib2.val(%d) != 123\n", ptr2.lib2.val)
+		}
+	})
+
 }

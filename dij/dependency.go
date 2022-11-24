@@ -123,7 +123,7 @@ func CallDependencyInjection(initMethod reflect.Method, inst any, reference Depe
 	return nil
 }
 
-func createAndInitializeInstance(insTyp reflect.Type, reference DependencyReferencePtr, forParameter bool, applyingName string) (reflect.Value, error) {
+func createAndInitializeInstance(instOrType any, reference DependencyReferencePtr, forParameter bool, applyingName string) (reflect.Value, error) {
 	// ================================
 	// save stack
 	stack := &DependencyStackRecord{
@@ -153,6 +153,19 @@ func createAndInitializeInstance(insTyp reflect.Type, reference DependencyRefere
 	}
 	// == end of saving stack deep count
 	// =================================
+	var instPtrValue reflect.Value
+	var insTyp reflect.Type
+	var ok bool
+	if insTyp, ok = instOrType.(reflect.Type); ok {
+		instPtrValue = reflect.New(insTyp)
+	} else {
+		insTyp = reflect.TypeOf(instOrType).Elem()
+		fmt.Printf("***** %v *****\n", insTyp)
+		instPtrValue = reflect.ValueOf(instOrType)
+		if instPtrValue.IsZero() {
+			instPtrValue = reflect.New(insTyp)
+		}
+	}
 
 	if insTyp.Kind() != reflect.Struct {
 		//log.Println(insTyp.Kind())
@@ -161,7 +174,7 @@ func createAndInitializeInstance(insTyp reflect.Type, reference DependencyRefere
 
 	// create new instance and save for reference
 	//log.Println("In", i, insTyp, insTyp.Kind())
-	instPtrValue := reflect.New(insTyp)
+
 	instValue := instPtrValue.Elem()
 	instPtrIf := instPtrValue.Interface()
 	if applyingName != "" {
@@ -186,7 +199,6 @@ func createAndInitializeInstance(insTyp reflect.Type, reference DependencyRefere
 }
 
 func initializeInstance(insTyp reflect.Type, instValue reflect.Value, reference DependencyReferencePtr, forParameter bool) error {
-	TypeOfType := reflect.TypeOf(reflect.TypeOf(struct{}{}))
 
 	for j := 0; j < insTyp.NumField(); j++ {
 		diTag, err := ParseDiTag(insTyp, j)
@@ -273,21 +285,39 @@ func initializeInstance(insTyp reflect.Type, instValue reflect.Value, reference 
 	return nil
 }
 
+func BuildInstance[T any](rootInstPtr *T, referencePtr DependencyReferencePtr, instName string) (*T, error) {
+	rootTyp := reflect.TypeOf(rootInstPtr).Elem()
+	if rootTyp.Kind() != reflect.Struct {
+		return nil, fmt.Errorf("the root type should be a struct pointer")
+	}
+	instPtr, err := createOrBuildInstance(rootInstPtr, referencePtr, instName)
+	return instPtr.(*T), err
+
+}
+
+func CreateInstance(rootTyp reflect.Type, referencePtr DependencyReferencePtr, instName string) (any, error) {
+	return createOrBuildInstance(rootTyp, referencePtr, instName)
+}
+
 // CreateInstance create an instance of rootTyp, the rootTyp should be kind of struct.
 //
 // A pointer of an instance for rootTyp will be returned if success.
-func CreateInstance(rootTyp reflect.Type, referencePtr DependencyReferencePtr, instName string) (any, error) {
+func createOrBuildInstance(root any, referencePtr DependencyReferencePtr, instName string) (any, error) {
 	if referencePtr == nil {
 		referencePtr = &DependencyReference{}
 	}
 
 	if instName == "^" || instName == "" || instName == "_" {
-		instName = FullnameOfType(reflect.PointerTo(rootTyp))
+		if rootTyp, ok := root.(reflect.Type); ok {
+			instName = FullnameOfType(reflect.PointerTo(rootTyp))
+		} else {
+			instName = FullnameOfType(reflect.TypeOf(root))
+		}
 	} // else if instName == "" {
 	//	log.Printf("Root instance doesn't support empty name. If you use empty name, it will not be referred in dependency-injection flow.")
 	//}
 
-	instPtrValue, err := createAndInitializeInstance(rootTyp, referencePtr, false, instName)
+	instPtrValue, err := createAndInitializeInstance(root, referencePtr, false, instName)
 	if err != nil {
 		return nil, err
 	}

@@ -4,7 +4,20 @@
 
 package lg
 
-import "strings"
+import (
+	"reflect"
+	"strings"
+)
+
+var TypeOfType reflect.Type
+
+func init() {
+	TypeOfType = reflect.TypeOf(reflect.TypeOf(struct{}{}))
+}
+
+func IsTypeInstance(inst any) bool {
+	return reflect.TypeOf(inst) == TypeOfType
+}
 
 type StructTagAttrs struct {
 	segments []string
