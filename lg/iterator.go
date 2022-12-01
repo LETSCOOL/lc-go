@@ -42,6 +42,18 @@ func Filter[T any](items []T, f func(v T) (is bool)) []T {
 	return filteredItems
 }
 
+func FilterAndMap[IN any, OUT any](items []IN, f func(v IN) (outData OUT, is bool)) []OUT {
+	filteredItems := make([]OUT, 0)
+
+	for _, item := range items {
+		if data, ok := f(item); ok {
+			filteredItems = append(filteredItems, data)
+		}
+	}
+
+	return filteredItems
+}
+
 func FilterFirst[T any](items []T, f func(v T) (is bool)) (val T, exists bool) {
 	for _, item := range items {
 		if f(item) {

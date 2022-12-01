@@ -7,16 +7,42 @@ package lg
 import (
 	"reflect"
 	"strings"
+	"time"
 )
 
 var TypeOfType reflect.Type
+var TypeOfErrorIf reflect.Type
+var TypeOfTime reflect.Type
 
 func init() {
 	TypeOfType = reflect.TypeOf(reflect.TypeOf(struct{}{}))
+	type Er struct {
+		First error
+	}
+	TypeOfErrorIf = reflect.TypeOf(Er{}).Field(0).Type
+	TypeOfTime = reflect.TypeOf(time.Now())
 }
 
 func IsTypeInstance(inst any) bool {
 	return reflect.TypeOf(inst) == TypeOfType
+}
+
+func IsError(t reflect.Type) bool {
+	switch t.Kind() {
+	case reflect.Pointer:
+		return IsError(t.Elem())
+	case reflect.Struct:
+		if method, ok := t.MethodByName("Error"); ok {
+			methodTyp := method.Type
+			if methodTyp.NumOut() == 1 && methodTyp.Out(0).Kind() == reflect.String {
+				return true
+			}
+		}
+	case reflect.Interface:
+		return t == TypeOfErrorIf
+	default:
+	}
+	return false
 }
 
 type StructTagAttrs struct {
@@ -39,6 +65,21 @@ func (a *StructTagAttrs) ContainsAttrWithValOnly(val string) bool {
 		return attr.ValOnly && attr.Val == val
 	})
 	return exists
+}
+
+func (a *StructTagAttrs) FilterAttrWithValOnly(f func(attr StructTagAttr) bool) []StructTagAttr {
+	return Filter(a.attrs, func(attr StructTagAttr) bool {
+		return attr.ValOnly && f(attr)
+	})
+}
+
+func (a *StructTagAttrs) FilterValOnly(f func(val string) bool) []string {
+	return FilterAndMap(a.attrs, func(attr StructTagAttr) (d string, is bool) {
+		if is = attr.ValOnly && f(attr.Val); is {
+			d = attr.Val
+		}
+		return
+	})
 }
 
 func (a *StructTagAttrs) FirstAttrWithValOnly() (attr StructTagAttr, exists bool) {
