@@ -103,6 +103,22 @@ func (a *StructTagAttrs) FirstAttrsWithKey(key string) (attr StructTagAttr, exis
 	})
 }
 
+func (a *StructTagAttrs) PreferredName(key string, allowedFirstValOnly bool) (name string, exists bool) {
+	if allowedFirstValOnly {
+		if attr, ok := a.FirstAttrWithValOnly(); ok {
+			if len(attr.Val) > 0 {
+				return attr.Val, true
+			}
+		}
+	}
+	if attr, ok := a.FirstAttrsWithKey(key); ok {
+		if len(attr.Val) > 0 {
+			return attr.Val, true
+		}
+	}
+	return "", false
+}
+
 type StructTagAttr struct {
 	Orig    string
 	Key     string
