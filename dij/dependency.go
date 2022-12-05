@@ -294,11 +294,19 @@ func initializeInstance(insTyp reflect.Type, instValue reflect.Value, reference 
 func BuildInstance[T any](rootInstPtr *T, referencePtr DependencyReferencePtr, instName string) (*T, error) {
 	rootTyp := reflect.TypeOf(rootInstPtr).Elem()
 	if rootTyp.Kind() != reflect.Struct {
-		return nil, fmt.Errorf("the root type should be a struct pointer")
+		return nil, fmt.Errorf("the root type(%v) should be a struct pointer", rootTyp)
 	}
 	instPtr, err := createOrBuildInstance(rootInstPtr, referencePtr, instName)
 	return instPtr.(*T), err
+}
 
+func BuildAnyInstance(rootInstPtr any, referencePtr DependencyReferencePtr, instName string) (any, error) {
+	rootTyp := reflect.TypeOf(rootInstPtr).Elem()
+	if rootTyp.Kind() != reflect.Struct {
+		return nil, fmt.Errorf("the root type(%v) should be a struct pointer", rootTyp)
+	}
+	instPtr, err := createOrBuildInstance(rootInstPtr, referencePtr, instName)
+	return instPtr, err
 }
 
 func CreateInstance(rootTyp reflect.Type, referencePtr DependencyReferencePtr, instName string) (any, error) {
