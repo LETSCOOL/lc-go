@@ -270,7 +270,8 @@ func initializeInstance(insTyp reflect.Type, instValue reflect.Value, reference 
 		}
 		if refValue == nil {
 			// ignored
-		} else if fieldSpec.Type == reflect.TypeOf(refValue) {
+		} else if fieldSpec.Type == reflect.TypeOf(refValue) ||
+			(fieldSpec.Type.Kind() == reflect.Interface && reflect.TypeOf(refValue).Implements(fieldSpec.Type)) {
 			field := instValue.Field(j)
 			if field.Type() != fieldSpec.Type {
 				log.Fatalf("Struct instance and type have different type for field index: %d, %v != %v", j, field.Type(), fieldSpec.Type)
